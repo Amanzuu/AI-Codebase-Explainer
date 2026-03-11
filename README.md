@@ -24,6 +24,16 @@
 - **Persistent Vector Index:** Cached FAISS indexes are auto-loaded across app restarts for the same repository.
 - **PDF Report Export:** Download the generated repository analysis as a PDF report.
 
+<div align='center'>
+    <img src="./ui-preview-1.png" alt="AI Codebase Explainer UI Preview 1" width="900" align="center">
+    <p align="center"><em>Repository analysis, semantic search, and interactive code exploration</em></p>
+</div>
+
+<div align='center'>
+    <img src="./ui-preview-2.png" alt="AI Codebase Explainer UI Preview 2" width="900" align="center">
+    <p align="center"><em>Polished Streamlit interface with repository insights and AI-assisted workflow</em></p>
+</div>
+
 ### Tools and Technologies
 
 | Tool / Library | Purpose |
