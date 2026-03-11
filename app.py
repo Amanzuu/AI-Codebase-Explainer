@@ -8,6 +8,7 @@ from embeddings import create_vector_store
 from rag_pipeline import create_qa_chain
 from repo_analyzer import analyze_repository
 from repo_loader import clone_repo
+from semantic_search import semantic_search
 
 st.set_page_config(
     page_title="AI Codebase Explainer by Aman",
@@ -72,6 +73,7 @@ def clear_current_repo():
     st.session_state.architecture_diagram = None
     st.session_state.repo_analysis = {}
     st.session_state.pending_question = ""
+    st.session_state.search_results = []
 
 
 st.markdown(
@@ -516,6 +518,8 @@ if not isinstance(st.session_state.repo_analysis, dict):
     st.session_state.repo_analysis = {"project_summary": str(st.session_state.repo_analysis)}
 if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
+if "search_results" not in st.session_state:
+    st.session_state.search_results = []
 
 with st.sidebar:
     st.markdown(
@@ -579,6 +583,19 @@ Code:
     else:
         st.caption("Index a repository to browse its files.")
 
+    st.title("Semantic Code Search")
+    search_query = st.text_input(
+        "Search codebase",
+        key="semantic_search_input",
+        disabled=st.session_state.vector_store is None,
+    )
+    if st.button("Search", use_container_width=True, disabled=st.session_state.vector_store is None or not search_query):
+        st.session_state.search_results = semantic_search(
+            st.session_state.vector_store,
+            search_query,
+            k=5
+        )
+
 st.markdown(
     """
     <div class="hero-card">
@@ -641,7 +658,7 @@ if analyze_clicked:
         vector_store = st.session_state.vector_store
     else:
         with st.spinner("Creating embeddings..."):
-            vector_store = create_vector_store(code, repo_path)
+            vector_store = create_vector_store(file_map, repo_path)
 
     st.session_state.qa_chain = get_cached_qa_chain(vector_store)
     st.session_state.vector_store = vector_store
@@ -656,6 +673,7 @@ if analyze_clicked:
         "model": "phi3",
     }
     st.session_state.repo_analysis = analyze_repository(code, file_map=file_map)
+    st.session_state.search_results = []
     st.success("Repository indexed successfully!")
 
 st.markdown(
@@ -727,6 +745,12 @@ if st.session_state.file_explanation:
         unsafe_allow_html=True,
     )
     st.write(st.session_state.file_explanation)
+
+if st.session_state.search_results:
+    st.subheader("Search Results")
+    for result in st.session_state.search_results:
+        st.markdown(f"**File:** {result['source']}")
+        st.code(result["content"][:500])
 
 st.markdown(
     """
