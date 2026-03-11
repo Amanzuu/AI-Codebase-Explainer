@@ -1,19 +1,13 @@
-from pathlib import Path
-
 from git import Repo
+import os
 
+def clone_repo(repo_url, folder="repo"):
 
-def clone_repo(repo_url, base_dir="repos"):
-    base_path = Path(base_dir)
-    base_path.mkdir(parents=True, exist_ok=True)
+    if os.path.exists(folder):
+        return folder
 
-    repo_name = repo_url.rstrip("/").split("/")[-1]
-    if repo_name.endswith(".git"):
-        repo_name = repo_name[:-4]
+    print("Cloning repository...")
 
-    repo_path = base_path / repo_name
-    if repo_path.exists():
-        return str(repo_path)
+    Repo.clone_from(repo_url, folder)
 
-    Repo.clone_from(repo_url, repo_path)
-    return str(repo_path)
+    return folder
