@@ -33,6 +33,7 @@ st.markdown(
             max-width: 1120px;
             padding-top: 2rem;
             padding-bottom: 2rem;
+            font-size: 1.06rem;
         }
         .hero-card,
         .panel-card,
@@ -56,14 +57,14 @@ st.markdown(
         }
         .hero-title {
             color: #f8fafc;
-            font-size: 3rem;
+            font-size: 3.2rem;
             line-height: 1;
             font-weight: 800;
             margin: 0 0 0.8rem 0;
         }
         .hero-subtitle {
             color: #cbd5e1;
-            font-size: 1rem;
+            font-size: 1.1rem;
             line-height: 1.6;
             max-width: 760px;
             margin: 0;
@@ -74,13 +75,13 @@ st.markdown(
         }
         .section-title {
             color: #f8fafc;
-            font-size: 1.1rem;
+            font-size: 1.28rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
         }
         .section-copy {
             color: #94a3b8;
-            font-size: 0.95rem;
+            font-size: 1.04rem;
             margin-bottom: 0.9rem;
         }
         .stat-chip-wrap {
@@ -98,13 +99,13 @@ st.markdown(
         }
         .stat-label {
             color: #94a3b8;
-            font-size: 0.76rem;
+            font-size: 0.84rem;
             text-transform: uppercase;
             letter-spacing: 0.06em;
         }
         .stat-value {
             color: #f8fafc;
-            font-size: 1.15rem;
+            font-size: 1.35rem;
             font-weight: 700;
             margin-top: 0.15rem;
         }
@@ -122,14 +123,14 @@ st.markdown(
         .prompt-title,
         .mini-title {
             color: #f8fafc;
-            font-size: 1rem;
+            font-size: 1.14rem;
             font-weight: 700;
             margin-bottom: 0.2rem;
         }
         .prompt-copy,
         .mini-copy {
             color: #94a3b8;
-            font-size: 0.9rem;
+            font-size: 1rem;
             line-height: 1.55;
             margin: 0;
         }
@@ -150,6 +151,7 @@ st.markdown(
         .stTextInput input {
             border-radius: 14px;
             background: rgba(15, 23, 42, 0.9);
+            font-size: 1.02rem;
         }
         .stButton button {
             border-radius: 14px;
@@ -157,9 +159,9 @@ st.markdown(
             background: #f7a12b;
             color: #111827;
             font-weight: 800;
-            font-size: 0.98rem;
+            font-size: 1.04rem;
             box-shadow: none;
-            padding: 0.65rem 1rem;
+            padding: 0.72rem 1rem;
         }
         .stButton button:hover {
             border-color: rgba(255, 210, 152, 0.4);
@@ -180,8 +182,21 @@ st.markdown(
         }
         .helper-note {
             color: #94a3b8;
-            font-size: 0.9rem;
+            font-size: 1rem;
             margin-top: 0.3rem;
+        }
+        .stCaption,
+        .stMarkdown,
+        .stSelectbox label,
+        .stTextInput label {
+            font-size: 1rem;
+        }
+        [data-testid="stChatMessageContent"] {
+            font-size: 1.04rem;
+            line-height: 1.7;
+        }
+        [data-testid="stChatInput"] textarea {
+            font-size: 1.02rem;
         }
     </style>
     """,
@@ -198,6 +213,10 @@ if "repo_stats" not in st.session_state:
     st.session_state.repo_stats = {"files": 0, "status": "Idle", "model": "phi3"}
 if "pending_question" not in st.session_state:
     st.session_state.pending_question = ""
+if "file_map" not in st.session_state:
+    st.session_state.file_map = {}
+if "file_explanation" not in st.session_state:
+    st.session_state.file_explanation = ""
 
 with st.sidebar:
     st.markdown(
@@ -215,6 +234,7 @@ with st.sidebar:
     if st.button("Clear Conversation", use_container_width=True):
         st.session_state.messages = []
         st.session_state.pending_question = ""
+        st.session_state.file_explanation = ""
         st.rerun()
     st.markdown(
         """
@@ -225,6 +245,25 @@ with st.sidebar:
         """,
         unsafe_allow_html=True,
     )
+    st.title("Project Files")
+    if st.session_state.file_map:
+        files = sorted(st.session_state.file_map.keys())
+        selected_file = st.selectbox("Select a file", files)
+        if st.button("Explain File", use_container_width=True, disabled=not st.session_state.qa_chain):
+            file_content = st.session_state.file_map[selected_file]
+            prompt = f"""Explain the following code file in simple words.
+
+File:
+{selected_file}
+
+Code:
+{file_content}
+"""
+            with st.spinner("Explaining file..."):
+                response = st.session_state.qa_chain.invoke({"query": prompt})
+                st.session_state.file_explanation = response["result"]
+    else:
+        st.caption("Index a repository to browse its files.")
 
 st.markdown(
     """
@@ -262,12 +301,14 @@ if analyze_clicked:
     with st.spinner("Cloning repository..."):
         repo_path = clone_repo(repo_url)
     with st.spinner("Loading code files..."):
-        code = load_code_files(repo_path)
+        code, file_map = load_code_files(repo_path)
     with st.spinner("Creating embeddings..."):
         vector_store = create_vector_store(code)
 
     st.session_state.qa_chain = create_qa_chain(vector_store)
     st.session_state.repo_url = repo_url
+    st.session_state.file_map = file_map
+    st.session_state.file_explanation = ""
     st.session_state.repo_stats = {
         "files": len(code),
         "status": "Indexed",
@@ -302,6 +343,18 @@ else:
         '<div class="helper-note">Start by indexing a repository before asking questions.</div>',
         unsafe_allow_html=True,
     )
+
+if st.session_state.file_explanation:
+    st.markdown(
+        """
+        <div class="panel-card">
+            <div class="section-title">File Explanation</div>
+            <div class="section-copy">Summary for the selected file from the explorer.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.write(st.session_state.file_explanation)
 
 st.markdown(
     """

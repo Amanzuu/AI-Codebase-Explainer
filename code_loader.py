@@ -3,6 +3,7 @@ import os
 def load_code_files(repo_path):
 
     texts = []
+    file_map = {}
 
     allowed_extensions = (
         ".py", ".js", ".ts", ".java", ".go",
@@ -19,8 +20,10 @@ def load_code_files(repo_path):
 
                 try:
                     with open(path, "r", encoding="utf-8", errors="ignore") as f:
-                        texts.append(f.read())
+                        content = f.read()
+                        texts.append(content)
+                        file_map[path] = content
                 except:
                     pass
 
-    return texts
+    return texts, file_map

@@ -1,6 +1,8 @@
 venv/
 repo/
 repos/
+.cache/
+vector_store/
 __pycache__/
 *.pyc
 .env
