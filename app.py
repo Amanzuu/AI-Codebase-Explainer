@@ -2,6 +2,7 @@ import textwrap
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from architecture import generate_architecture_diagram
 from code_loader import load_code_files
@@ -45,7 +46,7 @@ def render_analysis_card(title, icon, content):
     safe_content = (content or "No analysis available yet.").replace("\n", "<br>")
     st.markdown(
         f"""
-        <div class="analysis-card">
+        <div class="analysis-card reveal-card">
             <div class="analysis-icon">{icon}</div>
             <div class="analysis-title">{title}</div>
             <div class="analysis-body">{safe_content}</div>
@@ -231,6 +232,7 @@ st.markdown(
             --bg-1: #050816;
             --bg-2: #08101d;
             --bg-3: #0d1730;
+            --bg-4: #122243;
             --panel-1: rgba(12, 19, 39, 0.9);
             --panel-2: rgba(9, 14, 28, 0.96);
             --line: rgba(118, 196, 255, 0.16);
@@ -240,6 +242,51 @@ st.markdown(
             --accent-2: #53d0ff;
             --accent-3: #81f7c3;
             --accent-4: #ffd36e;
+            --glow: rgba(83, 208, 255, 0.26);
+            --warm-glow: rgba(255, 123, 31, 0.24);
+            --title-font: "Trebuchet MS", "Segoe UI Variable Display", "Arial", sans-serif;
+            --body-font: "Segoe UI", "Trebuchet MS", sans-serif;
+            --mono-font: "Cascadia Code", "Consolas", "Courier New", monospace;
+        }
+        @keyframes backgroundShift {
+            0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
+            50% { background-position: 6% 4%, -4% 2%, 3% -6%, 0% 0%; }
+            100% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; }
+        }
+        @keyframes auroraFloat {
+            0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.38; }
+            50% { transform: translate3d(24px, -18px, 0) scale(1.08); opacity: 0.52; }
+            100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.38; }
+        }
+        @keyframes pulseHalo {
+            0%, 100% { box-shadow: 0 0 0 rgba(83, 208, 255, 0.0), 0 0 36px rgba(255, 123, 31, 0.12); }
+            50% { box-shadow: 0 0 0 rgba(83, 208, 255, 0.0), 0 0 60px rgba(83, 208, 255, 0.22); }
+        }
+        @keyframes orbitSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes floatCard {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-7px); }
+        }
+        @keyframes riseIn {
+            from {
+                opacity: 0;
+                transform: translateY(22px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes shimmerSweep {
+            0% { transform: translateX(-140%); }
+            100% { transform: translateX(160%); }
+        }
+        @keyframes chipGlow {
+            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 10px 28px rgba(0,0,0,0.18); }
+            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 18px 34px rgba(83, 208, 255, 0.18); }
         }
         .stApp {
             background:
@@ -247,24 +294,15 @@ st.markdown(
                 radial-gradient(circle at 86% 14%, rgba(83, 208, 255, 0.18), transparent 20%),
                 radial-gradient(circle at 72% 78%, rgba(129, 247, 195, 0.10), transparent 22%),
                 linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 48%, var(--bg-3) 100%);
+            background-size: 130% 130%, 120% 120%, 145% 145%, 100% 100%;
+            animation: backgroundShift 18s ease-in-out infinite;
+            font-family: var(--body-font);
         }
         .block-container {
             max-width: 1180px;
             padding-top: 1.5rem;
             padding-bottom: 2rem;
             font-size: 1.06rem;
-        }
-        .block-container::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 34px 34px;
-            mask-image: radial-gradient(circle at center, black 45%, transparent 95%);
-            opacity: 0.28;
         }
         .hero-card,
         .panel-card,
@@ -278,12 +316,18 @@ st.markdown(
             border-radius: 26px;
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
             backdrop-filter: blur(12px);
+            position: relative;
+            animation: riseIn 0.8s ease both;
         }
         .hero-card {
             padding: 0;
             margin-bottom: 1.2rem;
             position: relative;
             overflow: hidden;
+            box-shadow:
+                0 36px 90px rgba(0, 0, 0, 0.38),
+                0 0 0 1px rgba(255,255,255,0.02),
+                0 0 84px rgba(83, 208, 255, 0.08);
         }
         .hero-card::after {
             content: "";
@@ -293,6 +337,17 @@ st.markdown(
             height: 360px;
             background: radial-gradient(circle, rgba(255, 123, 31, 0.18), transparent 64%);
             pointer-events: none;
+            animation: auroraFloat 12s ease-in-out infinite;
+        }
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            inset: -160% auto auto -20%;
+            width: 46%;
+            height: 300%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+            transform: rotate(18deg);
+            animation: shimmerSweep 7s linear infinite;
         }
         .hero-grid {
             display: grid;
@@ -321,12 +376,16 @@ st.markdown(
             margin: 0 0 0.8rem 0;
             max-width: 720px;
             letter-spacing: -0.04em;
+            font-family: var(--title-font);
+            text-shadow: 0 10px 38px rgba(0,0,0,0.22);
         }
         .hero-title .gradient-text {
-            background: linear-gradient(90deg, #ffffff 0%, #b8d7ff 42%, #7fe6ff 100%);
+            background: linear-gradient(90deg, #ffffff 0%, #b8d7ff 32%, #7fe6ff 58%, #ffd36e 100%);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
+            background-size: 200% auto;
+            animation: backgroundShift 8s ease-in-out infinite;
         }
         .hero-subtitle {
             color: #c8d6eb;
@@ -350,6 +409,12 @@ st.markdown(
             font-size: 0.88rem;
             font-weight: 700;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+            transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        }
+        .hero-pill:hover {
+            transform: translateY(-2px);
+            border-color: rgba(126, 211, 255, 0.28);
+            box-shadow: 0 14px 28px rgba(83, 208, 255, 0.12);
         }
         .hero-stage {
             min-height: 100%;
@@ -371,6 +436,7 @@ st.markdown(
             box-shadow:
                 inset 0 0 60px rgba(83, 208, 255, 0.08),
                 0 0 80px rgba(255, 123, 31, 0.08);
+            animation: pulseHalo 5s ease-in-out infinite, floatCard 6s ease-in-out infinite;
         }
         .hero-orbit::before,
         .hero-orbit::after {
@@ -379,10 +445,13 @@ st.markdown(
             border-radius: 50%;
             inset: 18px;
             border: 1px dashed rgba(255,255,255,0.10);
+            animation: orbitSpin 18s linear infinite;
         }
         .hero-orbit::after {
             inset: 46px;
             border-color: rgba(83, 208, 255, 0.18);
+            animation-duration: 11s;
+            animation-direction: reverse;
         }
         .hero-core {
             position: absolute;
@@ -398,6 +467,7 @@ st.markdown(
             font-size: 2rem;
             font-weight: 900;
             box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+            animation: pulseHalo 4s ease-in-out infinite;
         }
         .hero-node {
             position: absolute;
@@ -406,10 +476,11 @@ st.markdown(
             border-radius: 50%;
             background: var(--accent-4);
             box-shadow: 0 0 22px rgba(255, 211, 110, 0.72);
+            animation: floatCard 4.5s ease-in-out infinite;
         }
         .hero-node.one { top: 18px; left: 124px; }
-        .hero-node.two { right: 28px; top: 82px; background: var(--accent-2); box-shadow: 0 0 22px rgba(83, 208, 255, 0.72); }
-        .hero-node.three { bottom: 24px; left: 56px; background: var(--accent-3); box-shadow: 0 0 22px rgba(129, 247, 195, 0.64); }
+        .hero-node.two { right: 28px; top: 82px; background: var(--accent-2); box-shadow: 0 0 22px rgba(83, 208, 255, 0.72); animation-delay: -1.4s; }
+        .hero-node.three { bottom: 24px; left: 56px; background: var(--accent-3); box-shadow: 0 0 22px rgba(129, 247, 195, 0.64); animation-delay: -2.3s; }
         .hero-caption {
             margin-top: 1rem;
             color: #9fbbdf;
@@ -421,12 +492,27 @@ st.markdown(
         .panel-card {
             padding: 1.15rem 1.2rem 1rem 1.2rem;
             margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .panel-card::after,
+        .prompt-card::after,
+        .overview-shell::after,
+        .architecture-shell::after,
+        .chat-shell::after {
+            content: "";
+            position: absolute;
+            inset: auto auto 0 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(83,208,255,0), rgba(83,208,255,0.7), rgba(255,123,31,0.72), rgba(83,208,255,0));
         }
         .section-title {
             color: var(--text);
             font-size: 1.32rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
+            font-family: var(--title-font);
+            letter-spacing: -0.02em;
         }
         .section-copy,
         .architecture-copy {
@@ -447,6 +533,22 @@ st.markdown(
             border-radius: 20px;
             padding: 0.95rem 1rem;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+            position: relative;
+            overflow: hidden;
+            animation: chipGlow 5s ease-in-out infinite;
+            transition: transform 180ms ease, border-color 180ms ease;
+        }
+        .stat-chip:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 196, 120, 0.28);
+        }
+        .stat-chip::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.07), transparent);
+            transform: translateX(-140%);
+            animation: shimmerSweep 6.4s linear infinite;
         }
         .stat-label {
             color: #81a2cb;
@@ -466,6 +568,9 @@ st.markdown(
             border: 1px solid rgba(126, 211, 255, 0.12);
             border-radius: 22px;
             padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            animation: riseIn 0.8s ease both;
         }
         .prompt-card {
             margin-top: 1rem;
@@ -480,12 +585,23 @@ st.markdown(
             background: linear-gradient(90deg, rgba(78, 203, 255, 0.08), transparent 40%, rgba(255, 138, 31, 0.08));
             pointer-events: none;
         }
+        .sidebar-card::before {
+            content: "";
+            position: absolute;
+            inset: auto -20% -60% auto;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(83, 208, 255, 0.18), transparent 70%);
+            animation: auroraFloat 9s ease-in-out infinite;
+        }
         .prompt-title,
         .mini-title {
             color: var(--text);
             font-size: 1.14rem;
             font-weight: 800;
             margin-bottom: 0.2rem;
+            font-family: var(--title-font);
         }
         .prompt-copy,
         .mini-copy {
@@ -527,6 +643,25 @@ st.markdown(
             padding: 1.05rem;
             min-height: 220px;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+            position: relative;
+            overflow: hidden;
+            transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+        }
+        .analysis-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255, 196, 120, 0.3);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.04),
+                0 20px 40px rgba(0,0,0,0.22),
+                0 0 34px rgba(83,208,255,0.10);
+        }
+        .analysis-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.06), transparent);
+            transform: translateX(-150%);
+            animation: shimmerSweep 7.2s linear infinite;
         }
         .analysis-icon {
             font-size: 1.45rem;
@@ -558,6 +693,13 @@ st.markdown(
             background: rgba(11, 19, 38, 0.92);
             font-size: 1.02rem;
             border: 1px solid rgba(78, 203, 255, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 10px 30px rgba(0,0,0,0.12);
+            transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+        }
+        .stTextInput input:focus {
+            border-color: rgba(83, 208, 255, 0.48);
+            box-shadow: 0 0 0 1px rgba(83,208,255,0.24), 0 0 28px rgba(83,208,255,0.12);
+            transform: translateY(-1px);
         }
         .stButton button {
             border-radius: 16px;
@@ -568,17 +710,29 @@ st.markdown(
             font-size: 1.04rem;
             box-shadow: 0 14px 28px rgba(255, 138, 31, 0.18);
             padding: 0.78rem 1rem;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
         }
         .stButton button:hover {
             border-color: rgba(255, 218, 163, 0.34);
             background: linear-gradient(135deg, #ff9d39 0%, #ffc467 100%);
             color: #111827;
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 18px 34px rgba(255, 138, 31, 0.24);
         }
         .stButton button:disabled {
             background: linear-gradient(135deg, #594734 0%, #6f573d 100%);
             color: rgba(255, 245, 235, 0.55);
             border-color: rgba(255, 198, 130, 0.08);
             box-shadow: none;
+        }
+        .stDownloadButton button {
+            background: linear-gradient(135deg, #53d0ff 0%, #81f7c3 100%);
+            border-color: rgba(129, 247, 195, 0.28);
+            box-shadow: 0 16px 32px rgba(83, 208, 255, 0.18);
+        }
+        .stDownloadButton button:hover {
+            background: linear-gradient(135deg, #7adfff 0%, #9bffd3 100%);
+            box-shadow: 0 20px 36px rgba(83, 208, 255, 0.24);
         }
         [data-testid="stSidebar"] {
             background:
@@ -604,14 +758,19 @@ st.markdown(
             font-size: 1.04rem;
             line-height: 1.7;
         }
+        [data-testid="stChatMessage"] {
+            animation: riseIn 0.45s ease both;
+        }
         [data-testid="stChatInput"] textarea {
             font-size: 1.02rem;
+            border-radius: 18px;
         }
         [data-testid="stGraphVizChart"] {
             background: linear-gradient(180deg, rgba(8, 12, 23, 0.98), rgba(6, 10, 19, 0.98));
             border: 1px solid rgba(148, 163, 184, 0.1);
             border-radius: 24px;
             padding: 0.85rem;
+            box-shadow: 0 22px 48px rgba(0,0,0,0.2);
         }
         div[data-testid="stSuccess"] {
             background: rgba(10, 48, 36, 0.72);
@@ -622,6 +781,67 @@ st.markdown(
             background: rgba(12, 35, 63, 0.72);
             border: 1px solid rgba(78, 203, 255, 0.2);
             border-radius: 18px;
+        }
+        [data-testid="stCodeBlock"] {
+            border-radius: 18px;
+            border: 1px solid rgba(83, 208, 255, 0.14);
+            box-shadow: 0 16px 34px rgba(0,0,0,0.18);
+            overflow: hidden;
+        }
+        .search-results-shell {
+            position: relative;
+            padding: 1rem 1rem 0.6rem 1rem;
+            margin-top: 1rem;
+            border-radius: 26px;
+            background:
+                linear-gradient(180deg, rgba(12, 21, 42, 0.95), rgba(8, 14, 26, 0.98)),
+                radial-gradient(circle at top right, rgba(255,123,31,0.10), transparent 24%);
+            border: 1px solid rgba(118, 196, 255, 0.14);
+            box-shadow: 0 28px 70px rgba(0,0,0,0.28);
+            overflow: hidden;
+            animation: riseIn 0.8s ease both;
+        }
+        .search-results-shell::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: translateX(-150%);
+            animation: shimmerSweep 8s linear infinite;
+        }
+        .search-result-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0.55rem;
+            padding: 0.55rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(8, 17, 33, 0.78);
+            border: 1px solid rgba(83, 208, 255, 0.14);
+            color: #dff6ff;
+            font-family: var(--mono-font);
+            font-size: 0.92rem;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .search-result-index {
+            display: inline-grid;
+            place-items: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(255,123,31,0.95), rgba(83,208,255,0.95));
+            color: #091321;
+            font-weight: 900;
+            font-size: 0.82rem;
+        }
+        .search-result-divider {
+            height: 1px;
+            margin: 0.8rem 0 1rem 0;
+            background: linear-gradient(90deg, rgba(83,208,255,0), rgba(83,208,255,0.45), rgba(255,123,31,0.55), rgba(83,208,255,0));
+        }
+        .reveal-card {
+            animation: riseIn 0.85s ease both;
         }
         @media (max-width: 980px) {
             .hero-grid {
@@ -635,6 +855,11 @@ st.markdown(
             }
             .hero-title {
                 font-size: 3rem;
+            }
+            .search-result-meta {
+                display: flex;
+                width: 100%;
+                border-radius: 18px;
             }
         }
     </style>
@@ -670,6 +895,24 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = []
 if "copied_snippet" not in st.session_state:
     st.session_state.copied_snippet = ""
+if "did_initial_scroll_reset" not in st.session_state:
+    st.session_state.did_initial_scroll_reset = False
+
+if not st.session_state.did_initial_scroll_reset:
+    components.html(
+        """
+        <script>
+        const scrollTop = () => {
+            window.parent.scrollTo(0, 0);
+        };
+        scrollTop();
+        setTimeout(scrollTop, 80);
+        setTimeout(scrollTop, 240);
+        </script>
+        """,
+        height=0,
+    )
+    st.session_state.did_initial_scroll_reset = True
 
 with st.sidebar:
     st.markdown(
@@ -748,7 +991,7 @@ Code:
 
 st.markdown(
     """
-    <div class="hero-card">
+    <div class="hero-card reveal-card">
         <div class="hero-grid">
             <div class="hero-content">
                 <div class="eyebrow">Repository Intelligence</div>
@@ -783,7 +1026,7 @@ st.markdown(
 
 st.markdown(
     """
-    <div class="panel-card">
+    <div class="panel-card reveal-card">
         <div class="section-title">Analyze A Repository</div>
         <div class="section-copy">Paste a public GitHub URL, build embeddings, then ask questions about structure, flow, implementation details, and file-level behavior.</div>
     </div>
@@ -908,9 +1151,25 @@ if st.session_state.file_explanation:
     st.write(st.session_state.file_explanation)
 
 if st.session_state.search_results:
-    st.subheader("Search Results")
+    st.markdown(
+        """
+        <div class="search-results-shell">
+            <div class="section-title">Search Results</div>
+            <div class="section-copy">Top semantic matches across the indexed repository with line-aware snippets.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     for index, result in enumerate(st.session_state.search_results):
-        st.markdown(f"### File: {result['source']}")
+        st.markdown(
+            f"""
+            <div class="search-result-meta">
+                <span class="search-result-index">{index + 1}</span>
+                <span>{result['source']}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.code(
             result["content"][:500],
             language="python",
@@ -922,10 +1181,12 @@ if st.session_state.search_results:
             on_click=mark_snippet_copied,
             args=(result["content"],),
         )
+        if index < len(st.session_state.search_results) - 1:
+            st.markdown('<div class="search-result-divider"></div>', unsafe_allow_html=True)
 
 st.markdown(
     """
-    <div class="prompt-card">
+    <div class="prompt-card reveal-card">
         <div class="prompt-title">Starter Questions</div>
         <p class="prompt-copy">Use a quick prompt to explore the repository faster.</p>
     </div>
