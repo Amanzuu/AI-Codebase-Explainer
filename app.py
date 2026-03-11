@@ -1,3 +1,4 @@
+import textwrap
 from pathlib import Path
 
 import streamlit as st
@@ -52,6 +53,153 @@ def render_analysis_card(title, icon, content):
         """,
         unsafe_allow_html=True,
     )
+
+
+def _pdf_escape(text):
+    return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+
+def _normalize_pdf_paragraphs(content):
+    raw_text = str(content or "No analysis available.").replace("\r\n", "\n")
+    paragraphs = []
+    for paragraph in raw_text.split("\n"):
+        cleaned = " ".join(paragraph.split())
+        paragraphs.append(cleaned if cleaned else "")
+    return paragraphs
+
+
+def _build_pdf_report(repo_url, analysis):
+    report_heading = "AI Codebase Explainer by Aman - Report"
+    body_lines = []
+
+    for title, content in analysis.items():
+        pretty_title = title.replace("_", " ").title()
+        body_lines.append(pretty_title)
+        body_lines.append("-" * len(pretty_title))
+        for paragraph in _normalize_pdf_paragraphs(content):
+            if not paragraph:
+                body_lines.append("")
+                continue
+            wrapped_lines = textwrap.wrap(
+                paragraph,
+                width=72,
+                replace_whitespace=True,
+                drop_whitespace=True,
+            )
+            body_lines.extend(wrapped_lines or ["No analysis available."])
+        body_lines.append("")
+
+    page_line_limit = 48
+    pages = []
+    current_page = []
+    for line in body_lines:
+        current_page.append(line)
+        if len(current_page) >= page_line_limit:
+            pages.append(current_page)
+            current_page = []
+    if current_page:
+        pages.append(current_page)
+
+    objects = []
+
+    def add_object(content):
+        objects.append(content)
+        return len(objects)
+
+    font_object_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>")
+    page_object_ids = []
+
+    for page_index, page_lines in enumerate(pages):
+        content_commands = []
+        if page_index == 0:
+            report_title = _pdf_escape(report_heading)
+            repository_line = _pdf_escape(
+                (f"Repository: {repo_url or 'N/A'}").encode("latin-1", "replace").decode("latin-1")
+            )
+            content_commands.extend(
+                [
+                    "BT",
+                    "/F1 16 Tf",
+                    "50 770 Td",
+                    f"({report_title}) Tj",
+                    "0 -24 Td",
+                    "/F1 10 Tf",
+                    f"({repository_line}) Tj",
+                    "ET",
+                ]
+            )
+            body_start_y = 720
+        else:
+            page_header = _pdf_escape(f"{report_heading} (cont.)")
+            content_commands.extend(
+                [
+                    "BT",
+                    "/F1 10 Tf",
+                    "50 770 Td",
+                    f"({page_header}) Tj",
+                    "ET",
+                ]
+            )
+            body_start_y = 740
+
+        content_commands.extend(["BT", "/F1 10 Tf", f"50 {body_start_y} Td", "12 TL"])
+        first_line = True
+        for line in page_lines:
+            encoded_line = _pdf_escape(line.encode("latin-1", "replace").decode("latin-1"))
+            if first_line:
+                content_commands.append(f"({encoded_line}) Tj")
+                first_line = False
+            else:
+                content_commands.append(f"T* ({encoded_line}) Tj")
+        content_commands.append("ET")
+        stream = "\n".join(content_commands)
+        content_object_id = add_object(
+            f"<< /Length {len(stream.encode('latin-1'))} >>\nstream\n{stream}\nendstream"
+        )
+        page_object_id = add_object(
+            "<< /Type /Page /Parent {parent} 0 R /MediaBox [0 0 612 792] "
+            f"/Resources << /Font << /F1 {font_object_id} 0 R >> >> "
+            f"/Contents {content_object_id} 0 R >>"
+        )
+        page_object_ids.append(page_object_id)
+
+    kids = " ".join(f"{page_id} 0 R" for page_id in page_object_ids)
+    pages_object_id = add_object(
+        f"<< /Type /Pages /Kids [{kids}] /Count {len(page_object_ids)} >>"
+    )
+    catalog_object_id = add_object(f"<< /Type /Catalog /Pages {pages_object_id} 0 R >>")
+
+    updated_objects = []
+    for obj in objects:
+        updated_objects.append(obj.replace("{parent}", str(pages_object_id)))
+
+    pdf_parts = [b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"]
+    offsets = []
+    for index, obj in enumerate(updated_objects, start=1):
+        offsets.append(sum(len(part) for part in pdf_parts))
+        pdf_parts.append(f"{index} 0 obj\n{obj}\nendobj\n".encode("latin-1"))
+
+    xref_offset = sum(len(part) for part in pdf_parts)
+    pdf_parts.append(f"xref\n0 {len(updated_objects) + 1}\n".encode("latin-1"))
+    pdf_parts.append(b"0000000000 65535 f \n")
+    for offset in offsets:
+        pdf_parts.append(f"{offset:010d} 00000 n \n".encode("latin-1"))
+    pdf_parts.append(
+        (
+            f"trailer\n<< /Size {len(updated_objects) + 1} /Root {catalog_object_id} 0 R >>\n"
+            f"startxref\n{xref_offset}\n%%EOF"
+        ).encode("latin-1")
+    )
+    return b"".join(pdf_parts)
+
+
+def mark_snippet_copied(snippet_text):
+    st.session_state.copied_snippet = snippet_text
+    toast = getattr(st, "toast", None)
+    if callable(toast):
+        toast("Snippet copied!")
+    else:
+        st.success("Snippet copied!")
 
 
 def build_architecture_diagram():
@@ -520,6 +668,8 @@ if "vector_store" not in st.session_state:
     st.session_state.vector_store = None
 if "search_results" not in st.session_state:
     st.session_state.search_results = []
+if "copied_snippet" not in st.session_state:
+    st.session_state.copied_snippet = ""
 
 with st.sidebar:
     st.markdown(
@@ -705,6 +855,11 @@ else:
     )
 
 if st.session_state.repo_analysis:
+    report_pdf = _build_pdf_report(
+        st.session_state.repo_url,
+        st.session_state.repo_analysis,
+    )
+
     st.markdown(
         """
         <div class="overview-shell">
@@ -720,6 +875,12 @@ if st.session_state.repo_analysis:
     with overview_col2:
         render_analysis_card("Detected Tech Stack", "🧰", st.session_state.repo_analysis.get("tech_stack"))
         render_analysis_card("Architecture Overview", "🏗", st.session_state.repo_analysis.get("architecture_overview"))
+    st.download_button(
+        label="Download Analysis Report",
+        data=report_pdf,
+        file_name="repo_analysis.pdf",
+        mime="application/pdf",
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state.architecture_diagram is not None:
@@ -748,9 +909,19 @@ if st.session_state.file_explanation:
 
 if st.session_state.search_results:
     st.subheader("Search Results")
-    for result in st.session_state.search_results:
-        st.markdown(f"**File:** {result['source']}")
-        st.code(result["content"][:500])
+    for index, result in enumerate(st.session_state.search_results):
+        st.markdown(f"### File: {result['source']}")
+        st.code(
+            result["content"][:500],
+            language="python",
+            line_numbers=True,
+        )
+        st.button(
+            "Copy snippet",
+            key=f"copy_{index}",
+            on_click=mark_snippet_copied,
+            args=(result["content"],),
+        )
 
 st.markdown(
     """
